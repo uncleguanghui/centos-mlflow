@@ -10,9 +10,10 @@ dir_supervisor_config=/etc/supervisor/config.d
 
 # 环境相关
 env_name=mlflow
-dir_conda=$(conda info --base)
-pip=$dir_conda/envs/$env_name/bin/pip
-mlflow=$dir_conda/envs/$env_name/bin/mlflow
+dir_bin=$(conda info --base)/envs/$env_name/bin
+pip=$dir_bin/pip
+mlflow=$dir_bin/mlflow
+python=$dir_bin/python
 
 # ########################## 关闭服务 ##########################
 
@@ -23,6 +24,7 @@ for pid in $(pidof -x mlflow); do
         kill -9 $pid
     fi
 done
+echo "服务全关闭"
 
 # ########################## 安装并配置 ##########################
 
@@ -35,6 +37,7 @@ $pip install mlflow -i https://pypi.tuna.tsinghua.edu.cn/simple
 if [ -d "$dir_supervisor_config" ]
 then
     /bin/cp -rf $conf_supervisor $dir_supervisor_config
+    echo "supervisor配置完成"
 else
     echo "请安装supervisor来持久化服务：https://github.com/uncleguanghui/centos-supervisor"
 fi
@@ -45,11 +48,11 @@ git clone https://github.com/mlflow/mlflow.git
 cd mlflow/examples
 
 # 生成启动脚本
-content="cd $(pwd); $mlflow server --backend-store-uri ./mlruns --default-artifact-root ./mlruns --host 0.0.0.0 --port 8014"
+content="cd $(pwd)\n ln -fs $dir_bin/gunicorn /bin/gunicorn \n $mlflow server --backend-store-uri ./mlruns --default-artifact-root ./mlruns --host 0.0.0.0 --port 8014"
 echo "$content" > run_mlflow.sh
 
 # 一开始是没有任何结果的，需要先跑一个
-python sklearn_elasticnet_wine/train.py 0 0
+$python sklearn_elasticnet_wine/train.py 0 0
 
 # 启动后端服务
 if [ -d "$dir_supervisor_config" ]
