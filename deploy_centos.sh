@@ -2,13 +2,21 @@
 
 # ########################## 配置项 ##########################
 
+# 部署相关
 dir_parent=$(cd `dirname $0`;pwd)
 conf_supervisor=$dir_parent/mlflow.ini
 dir_deploy=/data
 dir_supervisor_config=/etc/supervisor/config.d
 
+# 环境相关
+env_name=mlflow
+dir_conda=$(conda info --base)
+pip=$dir_conda/envs/$env_name/bin/pip
+mlflow=$dir_conda/envs/$env_name/bin/mlflow
+
 # ########################## 关闭服务 ##########################
 
+supervisorctl stop mlflow
 for pid in $(pidof -x mlflow); do
     if [ $pid != $$ ]; then
         echo "[$(date)] : devpi : 程序正在运行， PID $pid"
@@ -19,8 +27,9 @@ done
 # ########################## 安装并配置 ##########################
 
 # 创建并激活虚拟环境，再在虚拟环境里安装mlflow
-conda create -n mlflow python=3.6 -y && conda activate mlflow && pip install scipy==1.2.1 mlflow -i https://pypi.tuna.tsinghua.edu.cn/simple
-mlflow=$(which mlflow)
+conda create -n $env_name python=3.6 -y
+$pip install scipy==1.2.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
+$pip install mlflow -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 更新supervisor配置文件
 if [ -d "$dir_supervisor_config" ]
